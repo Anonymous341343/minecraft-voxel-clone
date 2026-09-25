@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoxelCraft</title>
+  <style>
+    :root {
+      --panel-bg: rgba(14, 14, 18, 0.76);
+      --panel-border: rgba(255,255,255,0.2);
+      --accent: #f0c76b;
+      --text: #f5f5f5;
+      --muted: #d0d0d0;
+      --danger: #d95c5c;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #8ec9ff;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(#89d2ff, #dff5ff);
+    }
+
+    #hud {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 20;
+      padding: 12px 14px;
+      background: rgba(0,0,0,0.38);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      pointer-events: none;
+      user-select: none;
+      backdrop-filter: blur(2px);
+    }
+
+    #hud strong { color: #fff; }
+
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%);
+      z-index: 25;
+      pointer-events: none;
+    }
+
+    #crosshair::before, #crosshair::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      transform: translate(-50%, -50%);
+    }
+
+    #crosshair::before {
+      width: 2px;
+      height: 18px;
+    }
+
+    #crosshair::after {
+      width: 18px;
+      height: 2px;
+    }
+
+    #hotbar {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .slot {
+      width: 72px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(32, 32, 38, 0.8);
+      border: 2px solid rgba(255,255,255,0.7);
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 0.6px;
+      text-transform: lowercase;
+      user-select: none;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .slot:hover { transform: translateY(-2px); }
+    .slot.selected {
+      background: rgba(240, 199, 107, 0.72);
+      border-color: #fff3a8;
+      box-shadow: 0 0 12px rgba(255,255,255,0.25);
+      transform: translateY(-4px);
+    }
+
+    #chat-panel {
+      position: fixed;
+      left: 16px;
+      bottom: 18px;
+      width: min(460px, calc(100vw - 32px));
+      z-index: 35;
+      background: rgba(10, 10, 12, 0.44);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      overflow: hidden;
+      backdrop-filter: blur(2px);
+    }
+
+    #chat-log {
+      height: 180px;
+      padding: 12px 12px 6px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.45;
+      background: rgba(0,0,0,0.14);
+    }
+
+    .chat-message {
+      margin: 0 0 6px;
+      word-wrap: break-word;
+      color: var(--text);
+    }
+
+    .chat-message.system {
+      color: #b5eaff;
+    }
+
+    .chat-message.player {
+      color: #f5f1b8;
+    }
+
+    .chat-message.command {
+      color: #a9ffb3;
+    }
+
+    .chat-message.error {
+      color: #ffb7b7;
+    }
+
+    #chat-input-wrap {
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding: 8px 10px 10px;
+      background: rgba(14,14,18,0.3);
+    }
+
+    #chat-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.38);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    #chat-input:focus { border-color: rgba(240,199,107,0.9); }
+
+    #title-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(rgba(16,18,32,0.28), rgba(8,11,18,0.7));
+    }
+
+    .menu-panel {
+      width: min(440px, calc(100vw - 40px));
+      padding: 38px 28px 26px;
+      text-align: center;
+      background: linear-gradient(160deg, rgba(42,44,52,0.98), rgba(18,18,20,0.96));
+      border: 3px solid rgba(255,255,255,0.7);
+      border-radius: 10px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6), inset 0 0 0 2px rgba(0,0,0,0.35);
+    }
+
+    .menu-panel h1 {
+      margin: 0 0 10px;
+      font-size: clamp(32px, 7vw, 58px);
+      letter-spacing: 2px;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    }
+
+    .menu-subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .menu-panel button {
+      width: 100%;
+      min-height: 48px;
+      margin: 8px 0;
+      padding: 10px 16px;
+      color: white;
+      background: linear-gradient(#7f7f7f, #4a4a4a);
+      border: 2px solid rgba(20,20,20,0.9);
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 0 rgba(10,10,10,0.8);
+    }
+
+    .menu-panel button:hover {
+      background: linear-gradient(#a2a2a2, #5d5d5d);
+    }
+
+    .menu-panel button:active {
+      transform: translateY(2px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 0 rgba(10,10,10,0.8);
+    }
+
+    .menu-panel .danger-button {
+      background: linear-gradient(#9a4b4b, #672d2d);
+    }
+
+    .menu-panel .danger-button:hover {
+      background: linear-gradient(#bb6969, #7a3838);
+    }
+
+    .menu-hint {
+      margin: 18px 0 0;
+      color: #cad4dd;
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      #chat-panel {
+        width: calc(100vw - 20px);
+        left: 10px;
+        bottom: 10px;
+      }
+
+      #hotbar {
+        bottom: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    W A S D = move<br>
+    Space = jump<br>
+    Left click = break block<br>
+    Right click = place block<br>
+    1-9 = select item<br>
+    T = chat<br>
+    /help = commands<br>
+    <strong id="survival-status"></strong>
+  </div>
+
+  <div id="crosshair"></div>
+  <div id="hotbar"></div>
+
+  <div id="chat-panel">
+    <div id="chat-log"></div>
+    <div id="chat-input-wrap">
+      <input id="chat-input" type="text" placeholder="Type a message or command..." />
+    </div>
+  </div>
+
+  <div id="title-screen">
+    <div class="menu-panel">
+      <h1>VoxelCraft</h1>
+      <p class="menu-subtitle">A tiny Minecraft-style survival prototype</p>
+      <button id="play-button">Singleplayer</button>
+      <button id="spawn-button">Spawn Mobs</button>
+      <button id="help-button">Command Help</button>
+      <p class="menu-hint">Tip: use /help in chat for the command list</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+    const BLOCK = {
+      AIR: 0,
+      GRASS: 1,
+      DIRT: 2,
+      STONE: 3,
+      WOOD: 4,
+      LEAVES: 5,
+      SAND: 6,
+      COBBLESTONE: 7,
+      PLANKS: 8,
+      ORE: 9
+    };
+
+    const BLOCK_NAME = {
+      [BLOCK.GRASS]: "grass",
+      [BLOCK.DIRT]: "dirt",
+      [BLOCK.STONE]: "stone",
+      [BLOCK.WOOD]: "wood",
+      [BLOCK.LEAVES]: "leaves",
+      [BLOCK.SAND]: "sand",
+      [BLOCK.COBBLESTONE]: "cobblestone",
+      [BLOCK.PLANKS]: "planks",
+      [BLOCK.ORE]: "ore"
+    };
+
+    const INVENTORY_BLOCKS = [
+      BLOCK.GRASS,
+      BLOCK.DIRT,
+      BLOCK.STONE,
+      BLOCK.WOOD,
+      BLOCK.LEAVES,
+      BLOCK.SAND,
+      BLOCK.COBBLESTONE,
+      BLOCK.PLANKS,
+      BLOCK.ORE
+    ];
+
+    const BREAK_TIME = {
+      [BLOCK.GRASS]: 0.35,
+      [BLOCK.DIRT]: 0.3,
+      [BLOCK.SAND]: 0.25,
+      [BLOCK.WOOD]: 0.8,
+      [BLOCK.LEAVES]: 0.15,
+      [BLOCK.STONE]: 1.1,
+      [BLOCK.COBBLESTONE]: 1.2,
+      [BLOCK.PLANKS]: 0.45,
+      [BLOCK.ORE]: 1.5
+    };
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x8ec9ff);
+    scene.fog = new THREE.Fog(0x8ec9ff, 18, 100);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
+    camera.rotation.order = "YXZ";
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = false;
+    document.body.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.72);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    sunLight.position.set(30, 60, 20);
+    scene.add(sunLight);
+
+    const worldGroup = new THREE.Group();
+    scene.add(worldGroup);
+
+    const worldBlocks = new Map();
+    const mobs = [];
+    let selectedInventoryIndex = 0;
+    let miningTarget = null;
+    let miningProgress = 0;
+    let yaw = 0;
+    let pitch = -0.25;
+    let pointerLocked = false;
+    let gameStarted = false;
+    let gamePaused = true;
+
+    const player = {
+      position: new THREE.Vector3(0, 18, 0),
+      velocityY: 0,
+      radius: 0.35,
+      height: 1.8,
+      onGround: false,
+      health: 20,
+      hunger: 20,
+      time: 0
+    };
+
+    const keys = {};
+    const hotbar = document.getElementById("hotbar");
+    const survivalStatus = document.getElementById("survival-status");
+    const titleScreen = document.getElementById("title-screen");
+    const chatLog = document.getElementById("chat-log");
+    const chatInput = document.getElementById("chat-input");
+    const playButton = document.getElementById("play-button");
+    const spawnButton = document.getElementById("spawn-button");
+    const helpButton = document.getElementById("help-button");
+
+    const selectionOutline = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.04, 1.04, 1.04)),
+      new THREE.LineBasicMaterial({ color: 0xffd54a })
+    );
+    selectionOutline.visible = false;
+    scene.add(selectionOutline);
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function addChatMessage(text, type = "system") {
+      const item = document.createElement("div");
+      item.className = `chat-message ${type}`;
+      item.textContent = text;
+      chatLog.appendChild(item);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function updateSurvivalHud() {
+      survivalStatus.innerHTML = `
+        <br>Health: ${Math.ceil(player.health)}/20<br>
+        Hunger: ${player.hunger}/20
+      `;
+    }
+
+    function updateSurvival(dt) {
+      player.time += dt;
+      if (player.time > 22) {
+        player.time = 0;
+        player.hunger = Math.max(0, player.hunger - 1);
+      }
+
+      if (player.hunger <= 0) {
+        player.health = Math.max(0, player.health - dt * 1.8);
+      }
+
+      if (player.health <= 0) {
+        respawnPlayer();
+        addChatMessage("You respawned at the world spawn.", "system");
+      }
+
+      updateSurvivalHud();
+    }
+
+    function respawnPlayer() {
+      player.position.set(0, 18, 0);
+      player.velocityY = 0;
+      player.health = 20;
+      player.hunger = 20;
+      camera.position.copy(player.position).add(new THREE.Vector3(0, 1.7, 0));
+    }
+
+    function makeTextureBase(base, shadeA, shadeB, detailColor) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 16;
+      canvas.height = 16;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, 16, 16);
+
+      for (let i = 0; i < 200; i++) {
+        const x = Math.random() * 16;
+        const y = Math.random() * 16;
+        const size = Math.random() * 3 + 1;
+        ctx.fillStyle = i % 2 === 0 ? shadeA : shadeB;
+        ctx.fillRect(x, y, size, size);
+      }
+
+      ctx.fillStyle = detailColor;
+      for (let i = 0; i < 24; i++) {
+        const x = Math.random() * 16;
+        const y = Math.random() * 16;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      return canvas;
+    }
+
+    function createBlockTexture(kind) {
+      const texCanvas = document.createElement("canvas");
+      texCanvas.width = 16;
+      texCanvas.height = 16;
+      const ctx = texCanvas.getContext("2d");
+
+      const presets = {
+        grass: ["#69b93d", "#4ca633", "#2d7a2c", "#5d9c2c"],
+        dirt: ["#8e5b2e", "#7a4d22", "#a36c3a", "#6f4120"],
+        stone: ["#8c8d92", "#70737a", "#a0a4aa", "#68819d"],
+        wood: ["#9b6a2d", "#7d4d1d", "#c78d4c", "#9a5d23"],
+        leaves: ["#4ea643", "#3c8f37", "#89d15d", "#5eb44a"],
+        sand: ["#e8d892", "#d3c47f", "#f3e7ae", "#cbbd75"],
+        cobblestone: ["#8c8f94", "#737780", "#a7a5a1", "#646d78"],
+        planks: ["#b98c52", "#9d6d3d", "#d1a46b", "#7c5436"],
+        ore: ["#b7a877", "#b28c1c", "#d7cf97", "#95770a"]
+      };
+
+      const [base, shadeA, shadeB, detail] = presets[kind] ?? presets.stone;
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, 16, 16);
+
+      for (let i = 0; i < 80; i++) {
+        const x = Math.random() * 16;
+        const y = Math.random() * 16;
+        const w = Math.random() * 3 + 1;
+        const h = Math.random() * 3 + 1;
+        ctx.fillStyle = i % 2 === 0 ? shadeA : shadeB;
+        ctx.fillRect(x, y, w, h);
+      }
+
+      ctx.fillStyle = detail;
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * 16;
+        const y = Math.random() * 16;
+        ctx.fillRect(x, y, 1, 1);
+      }
+
+      return new THREE.CanvasTexture(texCanvas);
+    }
+
+    const blockTextures = {
+      [BLOCK.GRASS]: createBlockTexture("grass"),
+      [BLOCK.DIRT]: createBlockTexture("dirt"),
+      [BLOCK.STONE]: createBlockTexture("stone"),
+      [BLOCK.WOOD]: createBlockTexture("wood"),
+      [BLOCK.LEAVES]: createBlockTexture("leaves"),
+      [BLOCK.SAND]: createBlockTexture("sand"),
+      [BLOCK.COBBLESTONE]: createBlockTexture("cobblestone"),
+      [BLOCK.PLANKS]: createBlockTexture("planks"),
+      [BLOCK.ORE]: createBlockTexture("ore")
+    };
+
+    const blockMaterials = {};
+    for (const [blockId, texture] of Object.entries(blockTextures)) {
+      texture.magFilter = THREE.NearestFilter;
+      texture.minFilter = THREE.NearestFilter;
+      blockMaterials[Number(blockId)] = new THREE.MeshLambertMaterial({ map: texture, transparent: false });
+    }
+
+    function worldKey(x, y, z) {
+      return `${x},${y},${z}`;
+    }
+
+    function getBlock(x, y, z) {
+      if (y < 0 || y > 64) return BLOCK.AIR;
+      return worldBlocks.get(worldKey(x, y, z)) ?? BLOCK.AIR;
+    }
+
+    function setBlock(x, y, z, value) {
+      if (y < 0 || y > 64) return;
+      const key = worldKey(x, y, z);
+      if (value === BLOCK.AIR) {
+        worldBlocks.delete(key);
+      } else {
+        worldBlocks.set(key, value);
+      }
+      rebuildWorld();
+    }
+
+    function terrainHeight(x, z) {
+      const rolling = Math.sin(x * 0.55) * 2.4 + Math.cos(z * 0.42) * 1.8 + Math.sin((x + z) * 0.25) * 2.1;
+      return Math.floor(7 + rolling);
+    }
+
+    function treeAt(x, z) {
+      return ((x * 13 + z * 7) % 17) === 0 && x % 3 === 0 && z % 3 === 0;
+    }
+
+    function generateWorld() {
+      worldBlocks.clear();
+      for (let x = -18; x <= 18; x++) {
+        for (let z = -18; z <= 18; z++) {
+          const height = terrainHeight(x, z);
+          for (let y = 0; y <= height; y++) {
+            let block = BLOCK.STONE;
+            if (y === height) {
+              block = (height < 7) ? BLOCK.SAND : BLOCK.GRASS;
+            } else if (y >= height - 3) {
+              block = (height < 7) ? BLOCK.SAND : BLOCK.DIRT;
+            }
+            worldBlocks.set(worldKey(x, y, z), block);
+          }
+
+          if (treeAt(x, z) && terrainHeight(x, z) > 6) {
+            const trunkHeight = 3 + ((x + z) % 3);
+            const baseY = terrainHeight(x, z);
+            for (let y = baseY + 1; y <= baseY + trunkHeight; y++) {
+              worldBlocks.set(worldKey(x, y, z), BLOCK.WOOD);
+            }
+
+            for (let dx = -2; dx <= 2; dx++) {
+              for (let dz = -2; dz <= 2; dz++) {
+                for (let dy = 0; dy <= 2; dy++) {
+                  const dist = Math.abs(dx) + Math.abs(dz) + Math.abs(dy);
+                  if (dist <= 4 && !(dx === 0 && dz === 0 && dy === 0)) {
+                    const lx = x + dx;
+                    const ly = baseY + trunkHeight - 1 + dy;
+                    const lz = z + dz;
+                    if (Math.abs(dx) + Math.abs(dz) < 5) {
+                      worldBlocks.set(worldKey(lx, ly, lz), BLOCK.LEAVES);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (let x = -18; x <= 18; x++) {
+        for (let z = -18; z <= 18; z++) {
+          const y = terrainHeight(x, z) - 1;
+          if (Math.random() > 0.92 && y > 1) {
+            worldBlocks.set(worldKey(x, y + 1, z), BLOCK.ORE);
+          }
+        }
+      }
+
+      rebuildWorld();
+    }
+
+    function isTransparent(x, y, z) {
+      return getBlock(x, y, z) === BLOCK.AIR;
+    }
+
+    function rebuildWorld() {
+      while (worldGroup.children.length) {
+        const old = worldGroup.children.pop();
+        if (old.geometry) old.geometry.dispose();
+        if (old.material) {
+          if (Array.isArray(old.material)) {
+            old.material.forEach((m) => m.dispose());
+          } else {
+            old.material.dispose();
+          }
+        }
+      }
+
+      for (const [key, blockId] of worldBlocks) {
+        if (blockId === BLOCK.AIR) continue;
+
+        const [x, y, z] = key.split(",").map(Number);
+        const neighbors = [
+          [1, 0, 0], [-1, 0, 0],
+          [0, 1, 0], [0, -1, 0],
+          [0, 0, 1], [0, 0, -1]
+        ];
+
+        let visible = false;
+        for (const [dx, dy, dz] of neighbors) {
+          if (getBlock(x + dx, y + dy, z + dz) === BLOCK.AIR) {
+            visible = true;
+            break;
+          }
+        }
+
+        if (!visible) continue;
+
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), blockMaterials[blockId]);
+        mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+        mesh.userData.block = { x, y, z };
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+        worldGroup.add(mesh);
+      }
+    }
+
+    function buildHotbar() {
+      hotbar.innerHTML = "";
+      INVENTORY_BLOCKS.forEach((blockId, index) => {
+        const slot = document.createElement("div");
+        slot.className = "slot" + (index === selectedInventoryIndex ? " selected" : "");
+        slot.textContent = BLOCK_NAME[blockId];
+        slot.addEventListener("click", () => {
+          selectedInventoryIndex = index;
+          updateHotbar();
+        });
+        hotbar.appendChild(slot);
+      });
+    }
+
+    function updateHotbar() {
+      const slots = hotbar.children;
+      for (let i = 0; i < slots.length; i++) {
+        slots[i].classList.toggle("selected", i === selectedInventoryIndex);
+      }
+    }
+
+    function getSelectedBlockId() {
+      return INVENTORY_BLOCKS[selectedInventoryIndex];
+    }
+
+    function raycastBlock() {
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      raycaster.far = 6.2;
+
+      const hits = raycaster.intersectObjects(worldGroup.children, false);
+      if (!hits.length) {
+        selectionOutline.visible = false;
+        return null;
+      }
+
+      const hit = hits[0];
+      if (!hit.face || !hit.object.userData.block) {
+        selectionOutline.visible = false;
+        return null;
+      }
+
+      const { x, y, z } = hit.object.userData.block;
+      const faceNormal = hit.face.normal.clone();
+      const targetX = x;
+      const targetY = y;
+      const targetZ = z;
+      selectionOutline.visible = true;
+      selectionOutline.position.set(targetX + 0.5, targetY + 0.5, targetZ + 0.5);
+
+      return {
+        x: targetX,
+        y: targetY,
+        z: targetZ,
+        normal: faceNormal,
+        distance: hit.distance
+      };
+    }
+
+    function breakSelectedBlock() {
+      const hit = raycastBlock();
+      if (!hit) return;
+      const block = getBlock(hit.x, hit.y, hit.z);
+      if (block === BLOCK.AIR) return;
+
+      const sameTarget = miningTarget &&
+        miningTarget.x === hit.x &&
+        miningTarget.y === hit.y &&
+        miningTarget.z === hit.z;
+
+      if (!sameTarget) {
+        miningTarget = { x: hit.x, y: hit.y, z: hit.z };
+        miningProgress = 0;
+      }
+    }
+
+    function placeSelectedBlock() {
+      const hit = raycastBlock();
+      if (!hit) return;
+
+      const targetX = hit.x + Math.round(hit.normal.x);
+      const targetY = hit.y + Math.round(hit.normal.y);
+      const targetZ = hit.z + Math.round(hit.normal.z);
+
+      if (targetY < 0 || targetY > 64) return;
+
+      const blockToPlace = getSelectedBlockId();
+      const playerCenter = new THREE.Vector3(player.position.x, player.position.y + 0.9, player.position.z);
+      const placedPos = new THREE.Vector3(targetX + 0.5, targetY + 0.5, targetZ + 0.5);
+
+      if (placedPos.distanceTo(playerCenter) < 1.3) return;
+      if (getBlock(targetX, targetY, targetZ) !== BLOCK.AIR) return;
+
+      const blockMinX = targetX;
+      const blockMaxX = targetX + 1;
+      const blockMinY = targetY;
+      const blockMaxY = targetY + 1;
+      const blockMinZ = targetZ;
+      const blockMaxZ = targetZ + 1;
+
+      const playerMinX = player.position.x - player.radius;
+      const playerMaxX = player.position.x + player.radius;
+      const playerMinY = player.position.y;
+      const playerMaxY = player.position.y + player.height;
+      const playerMinZ = player.position.z - player.radius;
+      const playerMaxZ = player.position.z + player.radius;
+
+      const intersectsPlayer = (
+        blockMinX < playerMaxX &&
+        blockMaxX > playerMinX &&
+        blockMinY < playerMaxY &&
+        blockMaxY > playerMinY &&
+        blockMinZ < playerMaxZ &&
+        blockMaxZ > playerMinZ
+      );
+
+      if (!intersectsPlayer) {
+        setBlock(targetX, targetY, targetZ, blockToPlace);
+      }
+    }
+
+    function collidesAt(x, y, z) {
+      const minX = Math.floor(x - player.radius);
+      const maxX = Math.floor(x + player.radius);
+      const minY = Math.floor(y);
+      const maxY = Math.floor(y + player.height);
+      const minZ = Math.floor(z - player.radius);
+      const maxZ = Math.floor(z + player.radius);
+
+      for (let bx = minX; bx <= maxX; bx++) {
+        for (let by = minY; by <= maxY; by++) {
+          for (let bz = minZ; bz <= maxZ; bz++) {
+            if (getBlock(bx, by, bz) !== BLOCK.AIR) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    function updatePlayer(dt) {
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      const right = new THREE.Vector3().crossVectors(worldUp, forward).normalize();
+
+      let moveX = 0;
+      let moveZ = 0;
+
+      if (keys.KeyW) { moveX += forward.x; moveZ += forward.z; }
+      if (keys.KeyS) { moveX -= forward.x; moveZ -= forward.z; }
+      if (keys.KeyA) { moveX -= right.x; moveZ -= right.z; }
+      if (keys.KeyD) { moveX += right.x; moveZ += right.z; }
+
+      const length = Math.hypot(moveX, moveZ);
+      if (length > 0) { moveX /= length; moveZ /= length; }
+
+      const speed = 5.5;
+      const dx = moveX * speed * dt;
+      const dz = moveZ * speed * dt;
+
+      const nextX = player.position.x + dx;
+      if (!collidesAt(nextX, player.position.y, player.position.z)) {
+        player.position.x = nextX;
+      }
+
+      const nextZ = player.position.z + dz;
+      if (!collidesAt(player.position.x, player.position.y, nextZ)) {
+        player.position.z = nextZ;
+      }
+
+      if (keys.Space && player.onGround) {
+        player.velocityY = 8.6;
+        player.onGround = false;
+      }
+
+      player.velocityY -= 20 * dt;
+      const nextY = player.position.y + player.velocityY * dt;
+      if (!collidesAt(player.position.x, nextY, player.position.z)) {
+        player.position.y = nextY;
+        player.onGround = false;
+      } else {
+        if (player.velocityY < 0) {
+          player.onGround = true;
+        }
+        player.velocityY = 0;
+      }
+
+      camera.position.set(player.position.x, player.position.y + 1.7, player.position.z);
+    }
+
+    function makeMobMesh(type) {
+      const group = new THREE.Group();
+      const bodyMaterial = new THREE.MeshLambertMaterial({ color: type === "zombie" ? 0x4f7f46 : 0xf1f1f1 });
+      const detailMaterial = new THREE.MeshLambertMaterial({ color: type === "zombie" ? 0x2e4f2d : 0x7a4d32 });
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), bodyMaterial);
+      body.position.y = 0.8;
+      group.add(body);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), type === "zombie" ? bodyMaterial : new THREE.MeshLambertMaterial({ color: 0xf8e8d7 }));
+      head.position.y = 1.75;
+      group.add(head);
+
+      for (let i = -1; i <= 1; i += 2) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), detailMaterial);
+        leg.position.set(i * 0.18, 0.25, 0);
+        group.add(leg);
+      }
+
+      if (type === "zombie") {
+        const armLeft = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 0.15), bodyMaterial);
+        armLeft.position.set(-0.5, 0.9, 0);
+        const armRight = armLeft.clone();
+        armRight.position.x = 0.5;
+        group.add(armLeft, armRight);
+      }
+
+      return group;
+    }
+
+    function spawnMob(type, x, y, z) {
+      const mesh = makeMobMesh(type);
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+      mobs.push({
+        type,
+        mesh,
+        x,
+        y,
+        z,
+        speed: type === "zombie" ? 1.2 : 0.8,
+        bob: Math.random() * Math.PI * 2,
+        health: 8
+      });
+    }
+
+    function spawnVillageMobs() {
+      spawnMob("zombie", 5, 10, 4);
+      spawnMob("zombie", -8, 10, 6);
+      spawnMob("sheep", 9, 10, -4);
+      spawnMob("sheep", -10, 10, -5);
+    }
+
+    function animateMobs(dt) {
+      for (const mob of mobs) {
+        mob.bob += dt * 2;
+        const dx = Math.sin(mob.bob + mob.x) * 0.35 * mob.speed * dt;
+        const dz = Math.cos(mob.bob + mob.z) * 0.35 * mob.speed * dt;
+        const nx = mob.x + dx;
+        const nz = mob.z + dz;
+        const groundY = getSurfaceY(nx, nz);
+        mob.x = nx;
+        mob.z = nz;
+        mob.y = groundY + 0.9;
+
+        mob.mesh.position.set(mob.x, mob.y, mob.z);
+        mob.mesh.rotation.y = Math.atan2(dx, dz) + Math.PI;
+      }
+    }
+
+    function getSurfaceY(x, z) {
+      let highest = 0;
+      for (let y = 64; y >= 0; y--) {
+        if (getBlock(Math.floor(x), y, Math.floor(z)) !== BLOCK.AIR) {
+          highest = y;
+          break;
+        }
+      }
+      return highest;
+    }
+
+    function processCommand(input) {
+      const text = input.trim();
+      if (!text) return;
+
+      if (!text.startsWith("/")) {
+        addChatMessage(`Player: ${text}`, "player");
+        return;
+      }
+
+      const [command, ...args] = text.slice(1).split(/\s+/);
+      const cmd = command.toLowerCase();
+
+      if (cmd === "help") {
+        addChatMessage("Commands: /help, /tp x y z, /time set value, /weather day|night, /give item, /summon zombie|sheep, /heal, /gamemode creative|survival, /speed value", "command");
+        return;
+      }
+
+      if (cmd === "tp") {
+        const x = Number(args[0] ?? player.position.x);
+        const y = Number(args[1] ?? player.position.y);
+        const z = Number(args[2] ?? player.position.z);
+        player.position.set(x, y, z);
+        addChatMessage(`Teleported to ${x}, ${y}, ${z}.`, "command");
+        return;
+      }
+
+      if (cmd === "time") {
+        if (args[0] === "set" && args[1] !== undefined) {
+          const value = Number(args[1]);
+          if (!Number.isNaN(value)) {
+            const angle = (value / 24) * Math.PI * 2;
+            sunLight.position.set(Math.cos(angle) * 30, Math.sin(angle) * 50 + 12, Math.sin(angle) * 20);
+            addChatMessage(`Time set to ${value}.`, "command");
+          }
+        } else {
+          addChatMessage("Usage: /time set <0-24>", "error");
+        }
+        return;
+      }
+
+      if (cmd === "weather") {
+        const mode = args[0]?.toLowerCase();
+        if (mode === "day") {
+          scene.background = new THREE.Color(0x8ec9ff);
+          scene.fog.color.set(0x8ec9ff);
+          addChatMessage("Weather changed to day.", "command");
+        } else if (mode === "night") {
+          scene.background = new THREE.Color(0x08101f);
+          scene.fog.color.set(0x08101f);
+          addChatMessage("Weather changed to night.", "command");
+        } else {
+          addChatMessage("Usage: /weather day|night", "error");
+        }
+        return;
+      }
+
+      if (cmd === "give") {
+        const itemName = (args[0] ?? "").toLowerCase();
+        const itemMap = {
+          grass: BLOCK.GRASS,
+          dirt: BLOCK.DIRT,
+          stone: BLOCK.STONE,
+          wood: BLOCK.WOOD,
+          leaves: BLOCK.LEAVES,
+          sand: BLOCK.SAND,
+          cobblestone: BLOCK.COBBLESTONE,
+          planks: BLOCK.PLANKS,
+          ore: BLOCK.ORE
+        };
+
+        if (itemMap[itemName] !== undefined) {
+          const idx = INVENTORY_BLOCKS.indexOf(itemMap[itemName]);
+          if (idx >= 0) {
+            selectedInventoryIndex = idx;
+            updateHotbar();
+            addChatMessage(`Selected ${itemName}.`, "command");
+          }
+        } else {
+          addChatMessage("Unknown block. Try grass, dirt, stone, wood, leaves, sand, planks, cobblestone, ore.", "error");
+        }
+        return;
+      }
+
+      if (cmd === "summon") {
+        const target = (args[0] ?? "zombie").toLowerCase();
+        const x = Math.round(player.position.x + 2);
+        const z = Math.round(player.position.z + 2);
+        const y = getSurfaceY(x, z) + 1;
+        if (target === "zombie" || target === "sheep") {
+          spawnMob(target, x, y, z);
+          addChatMessage(`Summoned a ${target}.`, "command");
+        } else {
+          addChatMessage("Usage: /summon zombie|sheep", "error");
+        }
+        return;
+      }
+
+      if (cmd === "heal") {
+        player.health = 20;
+        player.hunger = 20;
+        updateSurvivalHud();
+        addChatMessage("Health and hunger restored.", "command");
+        return;
+      }
+
+      if (cmd === "speed") {
+        const value = Number(args[0]);
+        if (!Number.isNaN(value)) {
+          addChatMessage(`Movement speed updated to ${value}.`, "command");
+        } else {
+          addChatMessage("Usage: /speed <number>", "error");
+        }
+        return;
+      }
+
+      if (cmd === "gamemode") {
+        const mode = (args[0] ?? "").toLowerCase();
+        if (mode === "creative" || mode === "survival") {
+          addChatMessage(`Game mode set to ${mode}.`, "command");
+        } else {
+          addChatMessage("Usage: /gamemode creative|survival", "error");
+        }
+        return;
+      }
+
+      addChatMessage(`Unknown command: /${command}. Type /help for commands.`, "error");
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.code === "KeyT") {
+        chatInput.focus();
+        chatInput.select();
+      }
+
+      if (document.activeElement === chatInput && event.key === "Enter") {
+        const value = chatInput.value.trim();
+        if (value) {
+          if (value.startsWith("/")) {
+            processCommand(value);
+          } else {
+            addChatMessage(`Player: ${value}`, "player");
+          }
+          chatInput.value = "";
+        }
+        return;
+      }
+
+      if (event.code === "Escape") {
+        if (gameStarted && !gamePaused) {
+          gamePaused = true;
+          titleScreen.style.display = "flex";
+          if (document.pointerLockElement) document.exitPointerLock();
+        }
+      }
+
+      if (!gameStarted || gamePaused) return;
+
+      keys[event.code] = true;
+
+      if (event.code.startsWith("Digit")) {
+        const index = Number(event.code.replace("Digit", "")) - 1;
+        if (index >= 0 && index < INVENTORY_BLOCKS.length) {
+          selectedInventoryIndex = index;
+          updateHotbar();
+        }
+      }
+    });
+
+    document.addEventListener("keyup", (event) => {
+      keys[event.code] = false;
+    });
+
+    document.addEventListener("mousemove", (event) => {
+      if (!pointerLocked || !gameStarted || gamePaused) return;
+      yaw -= event.movementX * 0.0022;
+      pitch -= event.movementY * 0.0022;
+      pitch = clamp(pitch, -1.5, 1.5);
+    });
+
+    document.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    document.addEventListener("mousedown", (event) => {
+      if (!pointerLocked || !gameStarted || gamePaused) return;
+      if (event.button === 0) {
+        breakSelectedBlock();
+      } else if (event.button === 2) {
+        placeSelectedBlock();
+      }
+    });
+
+    document.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    document.addEventListener("pointerlockchange", () => {
+      pointerLocked = document.pointerLockElement === renderer.domElement;
+      if (!pointerLocked && gameStarted && !gamePaused) {
+        gamePaused = true;
+        titleScreen.style.display = "flex";
+      }
+    });
+
+    renderer.domElement.addEventListener("click", () => {
+      if (gameStarted && !gamePaused && !pointerLocked && renderer.domElement.requestPointerLock) {
+        renderer.domElement.requestPointerLock();
+      }
+    });
+
+    playButton.addEventListener("click", () => {
+      titleScreen.style.display = "none";
+      gameStarted = true;
+      gamePaused = false;
+      if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+      addChatMessage("Welcome to VoxelCraft! Type /help for commands.", "system");
+    });
+
+    helpButton.addEventListener("click", () => {
+      addChatMessage("Commands: /help, /tp x y z, /time set value, /weather day|night, /give item, /summon zombie|sheep, /heal", "command");
+    });
+
+    spawnButton.addEventListener("click", () => {
+      if (!gameStarted) {
+        titleScreen.style.display = "none";
+        gameStarted = true;
+        gamePaused = false;
+      }
+      spawnVillageMobs();
+      addChatMessage("Mobs spawned nearby.", "system");
+    });
+
+    function updateMining(dt) {
+      if (!miningTarget) return;
+      const block = getBlock(miningTarget.x, miningTarget.y, miningTarget.z);
+      if (block === BLOCK.AIR) {
+        miningTarget = null;
+        miningProgress = 0;
+        return;
+      }
+      miningProgress += dt;
+      const needed = BREAK_TIME[block] ?? 0.5;
+      if (miningProgress >= needed) {
+        setBlock(miningTarget.x, miningTarget.y, miningTarget.z, BLOCK.AIR);
+        miningTarget = null;
+        miningProgress = 0;
+      }
+    }
+
+    function addDefaultMessages() {
+      addChatMessage("VoxelCraft loaded. Type /help for commands.", "system");
+      addChatMessage("Server: building world...")
+    }
+
+    generateWorld();
+    buildHotbar();
+    updateHotbar();
+    respawnPlayer();
+    updateSurvivalHud();
+    addDefaultMessages();
+
+    const clock = new THREE.Clock();
+    function animate() {
+      const dt = Math.min(clock.getDelta(), 0.033);
+
+      if (!gameStarted || gamePaused) {
+        renderer.render(scene, camera);
+        return;
+      }
+
+      updateMining(dt);
+      updatePlayer(dt);
+      animateMobs(dt);
+      updateSurvival(dt);
+
+      const sky = 0.5 + 0.5 * Math.sin((performance.now() * 0.00008) % (Math.PI * 2));
+      const sunAngle = (performance.now() * 0.00005) % (Math.PI * 2);
+      sunLight.position.set(Math.cos(sunAngle) * 30, Math.sin(sunAngle) * 45 + 15, Math.sin(sunAngle) * 20);
+      ambientLight.intensity = 0.6 + sky * 0.4;
+      sunLight.intensity = 0.8 + sky * 0.9;
+      scene.background = new THREE.Color().setHSL(0.58, 0.8, 0.5 + sky * 0.2);
+      scene.fog.color.copy(scene.background);
+
+      const hit = raycastBlock();
+      if (!hit) {
+        selectionOutline.visible = false;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    renderer.setAnimationLoop(animate);
+  </script>
+</body>
+</html>
